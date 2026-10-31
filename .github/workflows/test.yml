@@ -1,0 +1,41 @@
+# Every claim the tests make is checked against a real pg_agent_gate, from a superuser
+# connection: the published ygg-pg image, as a service container.
+name: test
+
+on:
+  push:
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.12", "3.13"]
+    services:
+      postgres:
+        image: ghcr.io/latamflows/ygg-pg:0.3.3
+        env:
+          POSTGRES_PASSWORD: ci-only-password
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 2s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Tests against pg_agent_gate in the ygg-pg image
+        env:
+          YGG_AGENT_TEST_DSN: postgresql://postgres:ci-only-password@127.0.0.1:5432/postgres
+        run: uv run --group dev pytest -v
+      - name: The package builds
+        run: uv build

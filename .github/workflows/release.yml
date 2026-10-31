@@ -1,0 +1,37 @@
+# A tag vX.Y.Z publishes that version to PyPI with Trusted Publishing: GitHub's OIDC identity,
+# no API token stored anywhere. The tag must match the version in pyproject.toml, and the
+# tests run first against the published ygg-pg image.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
+  publish:
+    needs: test
+    runs-on: ubuntu-24.04
+    environment:
+      name: pypi
+      url: https://pypi.org/p/ygg-agent
+    permissions:
+      id-token: write      # the OIDC token PyPI trusts; nothing else
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+      - name: The tag is the version
+        run: |
+          v=$(sed -nE 's/^version = "([^"]+)"/\1/p' pyproject.toml)
+          test "v$v" = "$GITHUB_REF_NAME" || { echo "tag $GITHUB_REF_NAME != pyproject $v"; exit 1; }
+      - run: uv build
+      - name: Publish to PyPI (trusted publishing)
+        run: uv publish --trusted-publishing always
