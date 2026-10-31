@@ -9,6 +9,10 @@ limits, and records it; the verdict goes back to the model; repeat. There is no 
 no tool schema in the model's context, and no JSON between the model and its data: the model
 writes SQL, which is what it knows best, over PostgreSQL's own protocol.
 
+```sh
+pip install "ygg-agent[binary]"      # or: uv add ygg-agent
+```
+
 ```python
 from ygg_agent import Agent, OpenAICompatible
 
