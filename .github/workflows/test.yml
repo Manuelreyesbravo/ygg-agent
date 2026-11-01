@@ -19,8 +19,8 @@ jobs:
         python: ["3.10", "3.12", "3.13"]
     services:
       postgres:
-        # ygg-pg 0.3.4 (PostgreSQL 19rc1, pg_agent_gate 0.4.1), by digest.
-        image: ghcr.io/latamflows/ygg-pg@sha256:e9265995356e990ff8b0161a8b1aebfa83c6a4b383885f6ee4b8d7fbdc90e0e1
+        # ygg-pg 0.3.5 (PostgreSQL 19rc1, pg_agent_gate 0.4.1), by digest.
+        image: ghcr.io/latamflows/ygg-pg@sha256:9962ad3fac92af86ff813822aa33c8c9d3f37d49a1eaf4eaa34d43cb91e5f5c3
         env:
           POSTGRES_PASSWORD: ci-only-password
         ports: ["5432:5432"]

@@ -91,7 +91,7 @@ Python 3.10+, `psycopg` 3, and a PostgreSQL with pg_agent_gate 0.4.0 or later an
 registered with `agent_gate.register_agent()`. The quickest way to have one:
 
 ```sh
-podman run -d -p 5432:5432 -e POSTGRES_PASSWORD=secret ghcr.io/latamflows/ygg-pg:0.3.4
+podman run -d -p 5432:5432 -e POSTGRES_PASSWORD=secret ghcr.io/latamflows/ygg-pg:0.3.5
 ```
 
 ## Tests
