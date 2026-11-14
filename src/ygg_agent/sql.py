@@ -39,7 +39,19 @@ def extract_sql(text: str) -> str:
 
 def _strip_think(text: str) -> str:
     # Reasoning models (Qwen3, DeepSeek-R1) may put a <think> block before the answer.
-    return text.rsplit("</think>", 1)[1] if "</think>" in text else text
+    if "</think>" in text:
+        return text.rsplit("</think>", 1)[1]
+    # A block that opens and never closes. With reasoning switched off (Qwen3's /no_think) a
+    # model may still open it and answer inside: "<think>\n\nDONE". A model server's reasoning
+    # parser hides that; a model run in this process (LlamaCpp) shows it as it is. What follows
+    # the tag is taken as the answer only when it reads as one from its first line -- DONE, a
+    # statement, a code fence -- so the start of a chain of thought is not mistaken for it.
+    head = text.lstrip()
+    if head.startswith("<think>"):
+        rest = head[len("<think>"):].strip()
+        if rest.strip("`*.!").strip().upper() == "DONE" or rest.startswith("```") or _STARTS.match(rest):
+            return rest
+    return text
 
 
 def _first_statement(sql: str) -> str:

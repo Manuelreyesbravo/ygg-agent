@@ -85,6 +85,41 @@ gateways. `user_suffix=" /no_think"` turns off Qwen3's reasoning; `extra_body` p
 server-specific fields. Anything with a `complete(messages) -> Completion` method works;
 `ScriptedModel` replays fixed answers for tests.
 
+### The model in this process: no HTTP at all
+
+`LlamaCpp` (0.2.0) loads a GGUF file and computes the tokens in the agent's own process,
+through [llama-cpp-python](https://github.com/abetlen/llama-cpp-python). There is no model
+server to start and no HTTP request: the model writes SQL here, and the only connection the
+agent opens is PostgreSQL's.
+
+```sh
+pip install "ygg-agent[binary,local]"
+```
+
+```python
+from ygg_agent import Agent, LlamaCpp
+
+agent = Agent(
+    LlamaCpp("/models/qwen3-8b-q4_k_m.gguf", n_gpu_layers=-1, user_suffix=" /no_think"),
+    dsn="postgresql://billing_agent:...@db.internal/app",
+)
+```
+
+`n_gpu_layers=0` (the default) computes on the CPU and `-1` puts every layer on the GPU;
+`lora_path` applies an adapter; `grammar` takes a GBNF grammar the sampler must follow token
+by token, such as one [pg_grammar_guard](https://pgxn.org/dist/pg_grammar_guard/) compiles
+from the live catalog. The model is loaded on the first completion and kept, and one
+completion runs at a time.
+
+What this changes and what it does not: the gate's guarantees are the same with either
+class, because they come from the database. `LlamaCpp` removes the model server and its
+HTTP hop, so the whole loop is one process and one PostgreSQL connection. It costs that
+process the model's memory, and a crash inside llama.cpp ends the agent, not the database.
+
+`tests/test_model.py` checks it with a stand-in for llama-cpp-python, and, when
+`YGG_AGENT_TEST_GGUF` names a real model, with the real one while every Internet socket
+refuses to connect.
+
 ## Requirements
 
 Python 3.10+, `psycopg` 3, and a PostgreSQL with pg_agent_gate 0.4.0 or later and an agent
@@ -98,6 +133,7 @@ podman run -d -p 5432:5432 -e POSTGRES_PASSWORD=secret ghcr.io/latamflows/ygg-pg
 
 ```sh
 YGG_AGENT_TEST_DSN=postgresql://postgres:secret@127.0.0.1:5432/postgres uv run --group dev pytest
+YGG_AGENT_TEST_GGUF=/models/some.gguf uv run --group dev --extra local pytest tests/test_model.py
 ```
 
 The tests create their own database and agent, play the model with `ScriptedModel`, and check
