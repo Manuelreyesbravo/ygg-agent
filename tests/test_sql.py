@@ -41,3 +41,16 @@ def test_done():
     assert is_done("<think>finished</think>\n**DONE**")
     assert not is_done("DONE with the update: UPDATE t SET a = 1")
     assert not is_done("select 1")
+
+
+def test_a_think_block_that_never_closes():
+    # Seen with a Qwen3 GGUF run in process under /no_think: the block opens, and the answer
+    # is inside it. A server's reasoning parser hides this; LlamaCpp does not.
+    from ygg_agent.sql import extract_sql, is_done
+    assert is_done("<think>\n\nDONE")
+    assert is_done("<think>\n\n**DONE.**")
+    assert extract_sql("<think>\n\nUPDATE t SET a = 1 WHERE id = 4;") == "UPDATE t SET a = 1 WHERE id = 4"
+    assert extract_sql("<think>\n```sql\nSELECT 1;\n```") == "SELECT 1"
+    # The start of a chain of thought is not an answer.
+    assert not is_done("<think>\nLet me check whether the task is DONE")
+    assert extract_sql("<think>\nThe user wants every row gone, so I would") == ""

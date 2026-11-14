@@ -1,6 +1,6 @@
 [project]
 name = "ygg-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Run an LLM agent on PostgreSQL through pg_agent_gate, with no MCP: the model writes SQL, the database decides."
 readme = "README.md"
 license = "Apache-2.0"
@@ -17,6 +17,8 @@ classifiers = [
 
 [project.optional-dependencies]
 binary = ["psycopg[binary]>=3.2"]
+# The model in this process, with llama.cpp: no model server and no HTTP (ygg_agent.LlamaCpp).
+local = ["llama-cpp-python>=0.3"]
 
 [project.urls]
 Source = "https://github.com/Manuelreyesbravo/ygg-agent"

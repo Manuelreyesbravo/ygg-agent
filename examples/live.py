@@ -6,21 +6,32 @@
     YGG_AGENT_MODEL_URL=http://127.0.0.1:8080/v1 \\
     python examples/live.py
 
+With YGG_AGENT_MODEL_PATH=/models/some.gguf the model runs in THIS process (LlamaCpp,
+`pip install "ygg-agent[local]"`): no model server and no HTTP. YGG_AGENT_GPU_LAYERS says
+how many layers go to the GPU (0, the default, is CPU only; -1 is all).
+
 The DSN must be a role registered with agent_gate.register_agent(); the script prints
 what the model wrote and what the database decided, one line per statement.
 """
 import json
 import os
 
-from ygg_agent import Agent, OpenAICompatible
+from ygg_agent import Agent, LlamaCpp, OpenAICompatible
 
-model = OpenAICompatible(
-    os.environ.get("YGG_AGENT_MODEL_URL", "http://127.0.0.1:8080/v1"),
-    model=os.environ.get("YGG_AGENT_MODEL"),
-    api_key=os.environ.get("YGG_AGENT_API_KEY"),
-    user_suffix=os.environ.get("YGG_AGENT_USER_SUFFIX", ""),
-    extra_body=json.loads(os.environ.get("YGG_AGENT_EXTRA_BODY", "{}")),
-)
+if os.environ.get("YGG_AGENT_MODEL_PATH"):
+    model = LlamaCpp(
+        os.environ["YGG_AGENT_MODEL_PATH"],
+        n_gpu_layers=int(os.environ.get("YGG_AGENT_GPU_LAYERS", "0")),
+        user_suffix=os.environ.get("YGG_AGENT_USER_SUFFIX", ""),
+    )
+else:
+    model = OpenAICompatible(
+        os.environ.get("YGG_AGENT_MODEL_URL", "http://127.0.0.1:8080/v1"),
+        model=os.environ.get("YGG_AGENT_MODEL"),
+        api_key=os.environ.get("YGG_AGENT_API_KEY"),
+        user_suffix=os.environ.get("YGG_AGENT_USER_SUFFIX", ""),
+        extra_body=json.loads(os.environ.get("YGG_AGENT_EXTRA_BODY", "{}")),
+    )
 agent = Agent(model, dsn=os.environ["YGG_AGENT_DSN"],
               on_event=[lambda e: e.kind in ("refused", "aborted") and
                         print(f"    [{e.kind}] {e.reason[:110]}")])
